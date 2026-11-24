@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>イーストラジオ045 公開スケジュール</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e3a4c">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f6f7f9;color:#111;-webkit-text-size-adjust:100%;padding-bottom:76px}
+header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 12px;z-index:5}
+h1{font-size:18px;margin:0}
+h2{font-size:17px;margin:6px 0 10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+button{font-size:15px;padding:9px 13px;border:1px solid #bbb;border-radius:10px;background:#fff;cursor:pointer}
+button.primary{background:#1e3a4c;color:#fff;border-color:#1e3a4c}
+button.update{background:#0f172a;color:#fff;border-color:#0f172a;font-weight:700;letter-spacing:.02em}
+button.danger{background:#fff;color:#b91c1c;border-color:#b91c1c}
+button.mini{padding:4px 9px;font-size:13px}
+main{padding:12px;max-width:640px;margin:0 auto}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ddd;display:flex;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;border:none;border-radius:0;background:#fff;font-size:14px;padding:12px 4px 10px;color:#555;cursor:pointer}
+.tabbar button.on{color:#1e3a4c;font-weight:700;box-shadow:inset 0 3px 0 #1e3a4c}
+.st-making{background:#e5e7eb;color:#374151}
+.st-assembled{background:#dbeafe;color:#1e40af}
+.st-unlisted{background:#ffedd5;color:#9a3412}
+.st-published{background:#dcfce7;color:#166534}
+#overdueAlert{display:none;background:#fef2f2;border:2px solid #ef4444;border-radius:10px;padding:10px;margin-bottom:10px;font-size:14px}
+#overdueAlert .od-title{font-weight:700;color:#b91c1c;margin-bottom:6px}
+#overdueAlert button{display:block;width:100%;text-align:left;margin-top:6px;border-color:#fca5a5;background:#fff}
+.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;border-left:6px solid #999;cursor:pointer}
+.card.st-making{border-left-color:#9ca3af}
+.card.st-assembled{border-left-color:#2563eb}
+.card.st-unlisted{border-left-color:#ea580c}
+.card.st-published{border-left-color:#16a34a}
+.cardhead{display:flex;gap:8px;align-items:center}
+.epno{font-weight:700;color:#1e3a4c;font-size:16px}
+.badge{font-size:11px;border-radius:6px;padding:2px 7px;margin-left:auto;font-weight:700;white-space:nowrap}
+.title{font-size:17px;font-weight:600;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+.pubdate{font-size:16px;font-weight:700;margin-top:6px}
+.pubdate .lbl{font-size:12px;color:#555;font-weight:400;margin-right:6px}
+.pubdate.actual{color:#166534}
+.sub{font-size:13px;color:#555;margin-top:2px;word-break:break-all}
+.memo{font-size:13px;color:#333;background:#f8fafc;border-radius:8px;padding:8px;margin-top:8px;word-break:break-word;white-space:pre-wrap}
+.steps{display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-top:10px}
+.step{font-size:11px;border-radius:999px;padding:3px 8px;border:1px solid #cbd5e1;color:#94a3b8;background:#fff;white-space:nowrap}
+.step.done{background:#16a34a;border-color:#16a34a;color:#fff;font-weight:700}
+.step.doing{background:#ea580c;border-color:#ea580c;color:#fff;font-weight:700}
+.step-arrow{color:#cbd5e1;font-size:11px}
+.grouphead{font-size:14px;font-weight:700;color:#1e3a4c;margin:16px 0 8px}
+.grouphead:first-child{margin-top:2px}
+.muted{color:#777;font-size:14px}
+label{display:block;font-size:13px;color:#444;margin:12px 0 4px}
+input,select,textarea{width:100%;font-size:16px;padding:10px;border:1px solid #bbb;border-radius:10px;background:#fff}
+textarea{min-height:70px}
+.snap{font-size:13px;padding:8px 0;border-bottom:1px solid #eee}
+.toolbar{margin:10px 0}
+.filebtn{display:inline-block;font-size:15px;padding:9px 13px;border:1px solid #bbb;border-radius:10px;background:#fff;cursor:pointer}
+input[type=file]{display:none}
+</style>
+</head>
+<body>
+<main>
+  <!-- スケジュール（話の一覧） -->
+  <section id="scrList" class="screen">
+    <header style="margin:-12px -12px 10px">
+      <div class="row">
+        <h1>公開スケジュール</h1>
+        <div class="spacer"></div>
+        <button id="btnUpdate" class="update">↻ 更新</button>
+      </div>
+    </header>
+    <div id="overdueAlert"></div>
+    <div id="episodeList"></div>
+    <div class="toolbar row">
+      <button id="btnAdd" class="primary">＋ 話を足す</button>
+    </div>
+    <p class="muted">色は状態を表します。灰＝制作中、青＝組み立て完了、橙＝限定公開・確認待ち、緑＝公開済み。話を押すと詳細が見られます。</p>
+  </section>
+
+  <!-- 進行状況 -->
+  <section id="scrProgress" class="screen" style="display:none">
+    <h2>進行状況</h2>
+    <div id="progressList"></div>
+    <p class="muted">段階は「台本 → 音声 → 組み立て → 限定公開・確認 → 公開」です。話を押すと段階を進められます。</p>
+  </section>
+
+  <!-- 追加・編集 -->
+  <section id="scrForm" class="screen" style="display:none">
+    <h2 id="formTitle">話を足す</h2>
+    <label>話数（数字）</label>
+    <input id="fEp" type="number" min="1" step="1" inputmode="numeric">
+    <label>タイトル</label>
+    <input id="fTitle" type="text">
+    <label>公開予定日</label>
+    <input id="fDate" type="date">
+    <label>公開時刻</label>
+    <input id="fTime" type="time">
+    <label>状態</label>
+    <select id="fStatus">
+      <option value="making">制作中</option>
+      <option value="assembled">組み立て完了</option>
+      <option value="unlisted">限定公開・確認待ち</option>
+      <option value="published">公開済み</option>
+    </select>
+    <label>進行段階（済んだところ）</label>
+    <select id="fStageDone">
+      <option value="0">まだ何も済んでいない</option>
+      <option value="1">台本まで済み</option>
+      <option value="2">音声まで済み</option>
+      <option value="3">組み立てまで済み</option>
+      <option value="4">限定公開・確認まで済み</option>
+      <option value="5">公開まで済み（全部完了）</option>
+    </select>
+    <label>いま進めている段階</label>
+    <select id="fStageDoing">
+      <option value="-1">なし</option>
+      <option value="0">台本</option>
+      <option value="1">音声</option>
+      <option value="2">組み立て</option>
+      <option value="3">限定公開・確認</option>
+      <option value="4">公開</option>
+    </select>
+    <label>YouTubeのURL（公開・限定公開したら）</label>
+    <input id="fUrl" type="url" placeholder="https://youtu.be/...">
+    <label>メモ</label>
+    <textarea id="fMemo"></textarea>
+    <div class="toolbar row">
+      <button id="btnFormSave" class="primary">保存する</button>
+      <button id="btnFormCancel">やめる</button>
+      <button id="btnDelete" class="danger" style="display:none">この話を消す</button>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section id="scrSettings" class="screen" style="display:none">
+    <h2>設定</h2>
+    <p id="dataCounts" class="muted"></p>
+    <h2>控えファイル</h2>
+    <p class="muted">予定データはこのiPhoneの中にだけ保存されます。ときどき控えファイルを出して、別の場所に置いておくと安心です。</p>
+    <div class="toolbar row">
+      <button id="btnExport">控えファイルを出す</button>
+      <label class="filebtn" for="backupFile">控えファイルから戻す</label>
+      <input type="file" id="backupFile" accept=".json,application/json">
+    </div>
+    <h2>自動控え（アプリの中）</h2>
+    <p class="muted">予定を変えるたびに、アプリの中に自動で控えが残ります（最新10世代）。</p>
+    <div id="snapshotList"></div>
+  </section>
+</main>
+<nav class="tabbar">
+  <button id="tabList" class="on">スケジュール</button>
+  <button id="tabProgress">進行状況</button>
+  <button id="tabSettings">設定</button>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>
