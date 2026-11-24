@@ -67,6 +67,20 @@ for (const e of store.episodes) {
   if (f && f.from.includes(e.date) && e.date !== f.to) { e.date = f.to; dateFixed2 = true; }
 }
 if (dateFixed2) saveStore(false);
+/* 第7話・第8話の追加（2026-11-25：公開日程の確定に伴う）。
+   保存済みに無い話数だけを末尾に足す。既存の話数や手で変えた内容には一切触らない。 */
+const ADD_EPISODES_20261125 = [
+  { ep: 7, title: "タイトル未定", date: "2026-12-15", time: "19:00", status: "making", stageDone: 0, stageDoing: 0, url: "", memo: "" },
+  { ep: 8, title: "タイトル未定", date: "2026-12-18", time: "19:00", status: "making", stageDone: 0, stageDoing: 0, url: "", memo: "" }
+];
+let episodesAdded = false;
+for (const add of ADD_EPISODES_20261125) {
+  if (!store.episodes.some(e => Number(e.ep) === add.ep)) {
+    store.episodes.push(Object.assign({ id: uid() }, add));
+    episodesAdded = true;
+  }
+}
+if (episodesAdded) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
@@ -408,7 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnFormCancel").addEventListener("click", () => { editingId = null; showTab(currentTab); });
   document.getElementById("btnFormSave").addEventListener("click", submitForm);
   document.getElementById("btnDelete").addEventListener("click", deleteEditing);
-  document.getElementById("btnUpdate").addEventListener("click", forceUpdate);
+  document.querySelectorAll(".btn-update").forEach(b => b.addEventListener("click", forceUpdate));
   document.getElementById("btnExport").addEventListener("click", exportBackup);
   document.getElementById("backupFile").addEventListener("change", ev => { if (ev.target.files[0]) importBackupFile(ev.target.files[0]); ev.target.value = ""; });
   showTab("scrList");

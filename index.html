@@ -78,7 +78,7 @@ input[type=file]{display:none}
       <div class="row">
         <h1>公開スケジュール</h1>
         <div class="spacer"></div>
-        <button id="btnUpdate" class="update">↻ 更新</button>
+        <button id="btnUpdate" class="update btn-update">↻ 更新</button>
       </div>
     </header>
     <div id="overdueAlert"></div>
@@ -91,14 +91,26 @@ input[type=file]{display:none}
 
   <!-- 進行状況 -->
   <section id="scrProgress" class="screen" style="display:none">
-    <h2>進行状況</h2>
+    <header style="margin:-12px -12px 10px">
+      <div class="row">
+        <h1>進行状況</h1>
+        <div class="spacer"></div>
+        <button class="update btn-update">↻ 更新</button>
+      </div>
+    </header>
     <div id="progressList"></div>
     <p class="muted">段階は「台本 → 音声 → 組み立て → 限定公開・確認 → 公開」です。話を押すと段階を進められます。</p>
   </section>
 
   <!-- 制作予定（schedule.json 共有データ・読み取り専用） -->
   <section id="scrProd" class="screen" style="display:none">
-    <h2>制作予定</h2>
+    <header style="margin:-12px -12px 10px">
+      <div class="row">
+        <h1>制作予定</h1>
+        <div class="spacer"></div>
+        <button class="update btn-update">↻ 更新</button>
+      </div>
+    </header>
     <div id="prodNotice"></div>
     <div id="prodList"></div>
     <p class="muted">制作予定は共有データ（schedule.json）で管理しています。この画面は見るだけで、登録・変更は友が共有データ側で行います。</p>
@@ -153,7 +165,13 @@ input[type=file]{display:none}
 
   <!-- 設定 -->
   <section id="scrSettings" class="screen" style="display:none">
-    <h2>設定</h2>
+    <header style="margin:-12px -12px 10px">
+      <div class="row">
+        <h1>設定</h1>
+        <div class="spacer"></div>
+        <button class="update btn-update">↻ 更新</button>
+      </div>
+    </header>
     <p id="dataCounts" class="muted"></p>
     <h2>控えファイル</h2>
     <p class="muted">予定データはこのiPhoneの中にだけ保存されます。ときどき控えファイルを出して、別の場所に置いておくと安心です。</p>
