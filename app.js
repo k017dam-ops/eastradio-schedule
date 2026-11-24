@@ -51,6 +51,20 @@ for (const e of store.episodes) {
   if (f && e.date === f[0]) { e.date = f[1]; dateFixed = true; }
 }
 if (dateFixed) saveStore(false);
+/* 週2ペース決定（2026-11-25：火曜・金曜19時）に伴う日付付け替え。
+   初期データの日付と、上の付け替え後の日付の両方を対象にする。手で変えた日付には触らない。 */
+const DATE_FIX2_20261125 = {
+  3: { from: ["2026-12-01", "2026-12-04"], to: "2026-12-01" },
+  4: { from: ["2026-12-08", "2026-12-11"], to: "2026-12-04" },
+  5: { from: ["2026-12-15", "2026-12-18"], to: "2026-12-08" },
+  6: { from: ["2026-12-22", "2026-12-25"], to: "2026-12-11" }
+};
+let dateFixed2 = false;
+for (const e of store.episodes) {
+  const f = DATE_FIX2_20261125[Number(e.ep)];
+  if (f && f.from.includes(e.date) && e.date !== f.to) { e.date = f.to; dateFixed2 = true; }
+}
+if (dateFixed2) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
