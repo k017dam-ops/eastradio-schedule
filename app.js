@@ -42,6 +42,15 @@ if (!store.seeded) {
   store.seeded = true;
   saveStore(false);
 }
+/* 公開曜日ルール変更（2026-11-25決定：通常回は金曜19時）への日付付け替え。
+   初期データのままの日付だけを対象にし、手で変えた日付には触らない。 */
+const DATE_FIX_20261125 = { 3: ["2026-12-01", "2026-12-04"], 4: ["2026-12-08", "2026-12-11"], 5: ["2026-12-15", "2026-12-18"], 6: ["2026-12-22", "2026-12-25"] };
+let dateFixed = false;
+for (const e of store.episodes) {
+  const f = DATE_FIX_20261125[Number(e.ep)];
+  if (f && e.date === f[0]) { e.date = f[1]; dateFixed = true; }
+}
+if (dateFixed) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
