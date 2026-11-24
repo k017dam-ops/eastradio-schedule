@@ -2,7 +2,9 @@
 /* イーストラジオ045 公開スケジュール
    個人サイボウズ2と同じ方式: データはこの端末の localStorage だけに保存する。
    サーバー（GitHub Pages）には空のアプリ枠だけがあり、予定データは一切送られない。
-   画面は下タブ3つ: スケジュール / 進行状況 / 設定。 */
+   画面は下タブ4つ: スケジュール / 制作予定 / 進行状況 / 設定。
+   制作予定だけは例外で、正本はリポジトリの schedule.json（共有データ）。
+   アプリは表示するだけで、登録・変更は友がJSON側で行う。 */
 const LS_KEY = "eastradio-schedule-v1";
 
 const STATUS = {
@@ -119,9 +121,11 @@ function show(id) {
 function showTab(id) {
   currentTab = id;
   document.getElementById("tabList").classList.toggle("on", id === "scrList");
+  document.getElementById("tabProd").classList.toggle("on", id === "scrProd");
   document.getElementById("tabProgress").classList.toggle("on", id === "scrProgress");
   document.getElementById("tabSettings").classList.toggle("on", id === "scrSettings");
   if (id === "scrList") renderList();
+  if (id === "scrProd") loadProdSchedule();
   if (id === "scrProgress") renderProgress();
   if (id === "scrSettings") renderSettings();
   show(id);
@@ -195,6 +199,74 @@ function renderProgress() {
   }
   box.innerHTML = html;
   wireCards(box);
+}
+
+/* ----- 制作予定（schedule.json 共有データ・読み取り専用） -----
+   正本はリポジトリの schedule.json。友がJSON側で登録・変更し、アプリは表示だけする。
+   取れたら localStorage に控えを取り、取れなかったら前回分を「前回の取得分」と明示して出す。 */
+const PROD_LS_KEY = "eastradio-schedule-prod-last";
+const PROD_CATEGORIES = {
+  planning:   { label: "企画",               bg: "#ede9fe", fg: "#5b21b6", bar: "#8b5cf6" },
+  prep:       { label: "事前準備",           bg: "#e0f2fe", fg: "#075985", bar: "#38bdf8" },
+  meeting:    { label: "友との台本会議",     bg: "#fce7f3", fg: "#9d174d", bar: "#f472b6" },
+  script:     { label: "台本確認・修正",     bg: "#fef3c7", fg: "#92400e", bar: "#f59e0b" },
+  production: { label: "動画制作",           bg: "#dbeafe", fg: "#1e40af", bar: "#2563eb" },
+  unlisted:   { label: "限定公開・本人確認", bg: "#ffedd5", fg: "#9a3412", bar: "#ea580c" },
+  publish:    { label: "一般公開",           bg: "#dcfce7", fg: "#166534", bar: "#16a34a" }
+};
+function prodCategoryOf(it) {
+  return PROD_CATEGORIES[it.category] || { label: String(it.category || "その他"), bg: "#e5e7eb", fg: "#374151", bar: "#9ca3af" };
+}
+function sortProdItems(items) {
+  return items.slice().sort((a, b) =>
+    (String(a.date || "") < String(b.date || "") ? -1 : String(a.date || "") > String(b.date || "") ? 1 : 0) ||
+    String(a.time || "").localeCompare(String(b.time || "")) ||
+    String(a.id || "").localeCompare(String(b.id || "")));
+}
+function prodItemHtml(it) {
+  const cat = prodCategoryOf(it);
+  const dateLabel = it.date ? fmtShort(it.date, "") : "日付なし";
+  return '<div class="prodcard' + (it.done ? " done" : "") + '" style="border-left-color:' + cat.bar + '">' +
+    '<div class="cardhead"><span class="proddate">' + esc(dateLabel) + (it.time ? " " + esc(it.time) : "") + "</span></div>" +
+    '<div class="title">' + (it.done ? "✓ " : "") + esc(it.title) + "</div>" +
+    '<div class="prodmeta"><span class="catchip" style="background:' + cat.bg + ";color:" + cat.fg + '">' + esc(cat.label) + "</span>" +
+    (it.ep != null && it.ep !== "" ? '<span class="prodep">第' + esc(it.ep) + "話</span>" : "") + "</div>" +
+    (it.memo ? '<div class="memo">' + esc(it.memo) + "</div>" : "") +
+    "</div>";
+}
+function renderProd(items, notice) {
+  const nbox = document.getElementById("prodNotice");
+  const box = document.getElementById("prodList");
+  nbox.textContent = notice || "";
+  nbox.style.display = notice ? "" : "none";
+  if (!items || !items.length) {
+    box.innerHTML = '<p class="muted">制作予定はまだ登録されていません。</p>';
+    return;
+  }
+  box.innerHTML = sortProdItems(items).map(prodItemHtml).join("");
+}
+async function loadProdSchedule() {
+  const nbox = document.getElementById("prodNotice");
+  nbox.textContent = "読み込み中…";
+  nbox.style.display = "";
+  try {
+    const res = await fetch("schedule.json?t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("http " + res.status);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.items)) throw new Error("bad json");
+    try { localStorage.setItem(PROD_LS_KEY, JSON.stringify({ fetchedAt: new Date().toISOString(), data: data })); } catch (e) {}
+    renderProd(data.items, "");
+  } catch (err) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(PROD_LS_KEY) || "null"); } catch (e) {}
+    if (saved && saved.data && Array.isArray(saved.data.items)) {
+      const when = saved.fetchedAt ? saved.fetchedAt.replace("T", " ").slice(0, 16) : "日時不明";
+      renderProd(saved.data.items, "前回の取得分を表示中（取得日時：" + when + "）");
+    } else {
+      renderProd(null, "");
+      document.getElementById("prodList").innerHTML = '<p class="muted">制作予定を取得できませんでした。通信できる場所で開き直してください。</p>';
+    }
+  }
 }
 
 /* ----- 追加・編集 ----- */
@@ -329,6 +401,7 @@ function renderSettings() {
 /* ----- 起動 ----- */
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("tabList").addEventListener("click", () => showTab("scrList"));
+  document.getElementById("tabProd").addEventListener("click", () => showTab("scrProd"));
   document.getElementById("tabProgress").addEventListener("click", () => showTab("scrProgress"));
   document.getElementById("tabSettings").addEventListener("click", () => showTab("scrSettings"));
   document.getElementById("btnAdd").addEventListener("click", () => openForm(null));
