@@ -143,20 +143,8 @@
       "title": "第6話 一般公開",
       "updatedAt": "2026-11-25T06:00:00+09:00",
       "updatedBy": "mochi"
-    },
-    {
-      "id": "s0013",
-      "ep": 7,
-      "category": "meeting",
-      "title": "第7話 台本会議（テスト）",
-      "date": "2026-11-30",
-      "time": "",
-      "done": false,
-      "memo": "",
-      "updatedAt": "2026-11-25T05:59:49.790+09:00",
-      "updatedBy": "tomo"
     }
   ],
-  "updatedAt": "2026-11-25T05:59:49.790+09:00",
+  "updatedAt": "2026-11-25T06:01:47.011+09:00",
   "version": 1
 }
