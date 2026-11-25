@@ -83,6 +83,19 @@ for (const add of ADD_EPISODES_20261125) {
   }
 }
 if (episodesAdded) saveStore(false);
+/* 第5話・第6話の組み立て完了の反映（2026-11-25：レイナのOK済み）。
+   初期データのまま（制作中・音声まで完了・組み立て進行中）のときだけ付け替え、
+   手で変えた内容には触らない。 */
+const STATUS_FIX_20261125 = [5, 6];
+let statusFixed = false;
+for (const e of store.episodes) {
+  if (STATUS_FIX_20261125.includes(Number(e.ep)) &&
+      e.status === "making" && Number(e.stageDone) === 2 && Number(e.stageDoing) === 2) {
+    e.status = "assembled"; e.stageDone = 3; e.stageDoing = -1;
+    statusFixed = true;
+  }
+}
+if (statusFixed) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
