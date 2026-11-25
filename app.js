@@ -2,9 +2,11 @@
 /* イーストラジオ045 公開スケジュール
    個人サイボウズ2と同じ方式: データはこの端末の localStorage だけに保存する。
    サーバー（GitHub Pages）には空のアプリ枠だけがあり、予定データは一切送られない。
-   画面は下タブ4つ: スケジュール / 制作予定 / 進行状況 / 設定。
+   画面は下タブ5つ: スケジュール / 制作予定 / 進行状況 / ネタ倉庫 / 設定。
    制作予定だけは例外で、正本はリポジトリの schedule.json（共有データ）。
-   アプリは表示するだけで、登録・変更は友がJSON側で行う。 */
+   アプリは表示するだけで、登録・変更は友がJSON側で行う。
+   ネタ倉庫も表示だけで、正本は非公開リポジトリ eastradio-ideas の ideas.json。
+   読み取りキーは localStorage の専用キーにだけ置き、控えファイル・自動控えには絶対に入れない。 */
 const LS_KEY = "eastradio-schedule-v1";
 
 const STATUS = {
@@ -137,10 +139,12 @@ function showTab(id) {
   document.getElementById("tabList").classList.toggle("on", id === "scrList");
   document.getElementById("tabProd").classList.toggle("on", id === "scrProd");
   document.getElementById("tabProgress").classList.toggle("on", id === "scrProgress");
+  document.getElementById("tabIdeas").classList.toggle("on", id === "scrIdeas");
   document.getElementById("tabSettings").classList.toggle("on", id === "scrSettings");
   if (id === "scrList") renderList();
   if (id === "scrProd") loadProdSchedule();
   if (id === "scrProgress") renderProgress();
+  if (id === "scrIdeas") loadIdeas();
   if (id === "scrSettings") renderSettings();
   show(id);
 }
@@ -283,6 +287,154 @@ async function loadProdSchedule() {
   }
 }
 
+/* ----- ネタ倉庫（ideas.json・非公開リポジトリ・読み取り専用） -----
+   正本は非公開リポジトリ k017dam-ops/eastradio-ideas の ideas.json（スキーマは IDEAS_JSON.md）。
+   GitHub API の contents エンドポイントを、読み取りキー付きで叩いて表示だけする。
+   キーと取得キャッシュは localStorage の専用キーにだけ置く。store には入れないので、
+   控えファイル（exportBackup）にも自動控え（snapshots）にも混ざらない。 */
+const IDEAS_KEY_LS = "eastradio-schedule-ideas-key";
+const IDEAS_CACHE_LS = "eastradio-schedule-ideas-cache";
+const IDEAS_API_URL = "https://api.github.com/repos/k017dam-ops/eastradio-ideas/contents/ideas.json";
+/* 分類・状態のラベルは IDEAS_JSON.md の対応表どおり */
+const IDEA_CATEGORIES = {
+  favorite:  { label: "好きな作品・人物",     bg: "#fce7f3", fg: "#9d174d" },
+  views:     { label: "再生数を意識した企画", bg: "#e0f2fe", fg: "#075985" },
+  crossover: { label: "ジャンル横断企画",     bg: "#ede9fe", fg: "#5b21b6" },
+  timely:    { label: "時事企画",             bg: "#fef3c7", fg: "#92400e" },
+  series:    { label: "長期シリーズ",         bg: "#dcfce7", fg: "#166534" }
+};
+const IDEA_STATUSES = {
+  candidate: { label: "候補",     bg: "#e5e7eb", fg: "#374151", bar: "#9ca3af" },
+  adopted:   { label: "採用済み", bg: "#dcfce7", fg: "#166534", bar: "#16a34a" },
+  hold:      { label: "保留",     bg: "#fef3c7", fg: "#92400e", bar: "#f59e0b" },
+  producing: { label: "制作中",   bg: "#dbeafe", fg: "#1e40af", bar: "#2563eb" },
+  produced:  { label: "制作済み", bg: "#ede9fe", fg: "#5b21b6", bar: "#8b5cf6" }
+};
+let ideasFilter = "all";
+let ideasItemsCache = null;   // 直近に描画した企画（分類フィルタの切り替え用）
+let ideasNoticeText = "";
+function ideaCategoryOf(it) {
+  return IDEA_CATEGORIES[it.category] || { label: String(it.category || "その他"), bg: "#e5e7eb", fg: "#374151" };
+}
+function ideaStatusOf(it) { return IDEA_STATUSES[it.status] || IDEA_STATUSES.candidate; }
+function fmtIdeaDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+  if (!m) return "";
+  return Number(m[2]) + "/" + Number(m[3]);
+}
+function sortIdeaItems(items) {
+  return items.slice().sort((a, b) =>
+    String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) ||
+    String(a.id || "").localeCompare(String(b.id || "")));
+}
+function ideaItemHtml(it) {
+  const cat = ideaCategoryOf(it), st = ideaStatusOf(it);
+  let chips = '<span class="catchip" style="background:' + cat.bg + ";color:" + cat.fg + '">' + esc(cat.label) + "</span>" +
+    '<span class="catchip" style="background:' + st.bg + ";color:" + st.fg + '">' + esc(st.label) + "</span>";
+  if (it.priority === "high") chips += '<span class="catchip" style="background:#fee2e2;color:#b91c1c">優先度：高</span>';
+  if (it.priority === "low") chips += '<span class="catchip" style="background:#f1f5f9;color:#64748b">優先度：低</span>';
+  if (it.needsPrep) chips += '<span class="catchip" style="background:#fff7ed;color:#9a3412">事前準備あり</span>';
+  if (it.linkedSchedule && it.linkedSchedule.episode != null && it.linkedSchedule.episode !== "") {
+    chips += '<span class="catchip" style="background:#dcfce7;color:#166534">第' + esc(it.linkedSchedule.episode) + "話の制作予定へ移行済み</span>";
+  }
+  return '<div class="prodcard" style="border-left-color:' + st.bar + '">' +
+    '<div class="title">' + esc(it.title) + "</div>" +
+    '<div class="prodmeta">' + chips + "</div>" +
+    (it.summary ? '<div style="font-size:14px;margin-top:6px;white-space:pre-wrap;word-break:break-word">' + esc(it.summary) + "</div>" : "") +
+    (it.timing ? '<div class="sub">公開時期の候補：' + esc(it.timing) + "</div>" : "") +
+    (it.memo ? '<div class="memo">メモ：' + esc(it.memo) + "</div>" : "") +
+    (it.updatedAt ? '<div class="sub">更新：' + fmtIdeaDate(it.updatedAt) + (it.updatedBy ? "（" + esc(it.updatedBy) + "）" : "") + "</div>" : "") +
+    "</div>";
+}
+function renderIdeaFilters() {
+  const box = document.getElementById("ideasFilters");
+  const items = ideasItemsCache || [];
+  const keys = ["all"].concat(Object.keys(IDEA_CATEGORIES));
+  box.innerHTML = keys.map(k => {
+    const label = k === "all" ? "すべて" : IDEA_CATEGORIES[k].label;
+    const n = k === "all" ? items.length : items.filter(it => it.category === k).length;
+    return '<button type="button" class="chip' + (ideasFilter === k ? " on" : "") + '" data-ifilter="' + k + '">' + esc(label) + (n ? " " + n : "") + "</button>";
+  }).join("");
+  box.querySelectorAll("[data-ifilter]").forEach(b => b.addEventListener("click", () => {
+    ideasFilter = b.getAttribute("data-ifilter");
+    renderIdeas(ideasItemsCache, ideasNoticeText);
+  }));
+}
+function renderIdeas(items, notice) {
+  ideasNoticeText = notice || "";
+  const nbox = document.getElementById("ideasNotice");
+  nbox.textContent = ideasNoticeText;
+  nbox.style.display = ideasNoticeText ? "" : "none";
+  const box = document.getElementById("ideasList");
+  if (!items) {
+    document.getElementById("ideasFilters").innerHTML = "";
+    box.innerHTML = "";
+    return;
+  }
+  ideasItemsCache = items;
+  renderIdeaFilters();
+  if (!items.length) {
+    box.innerHTML = '<p class="muted">ネタ倉庫はまだ空です。企画は友が倉庫側で登録します。</p>';
+    return;
+  }
+  const filtered = sortIdeaItems(items).filter(it => ideasFilter === "all" || it.category === ideasFilter);
+  box.innerHTML = filtered.length ? filtered.map(ideaItemHtml).join("") : '<p class="muted">この分類の企画はまだありません。</p>';
+}
+function readIdeasCache() {
+  try {
+    const s = JSON.parse(localStorage.getItem(IDEAS_CACHE_LS) || "null");
+    return (s && s.data && Array.isArray(s.data.items)) ? s : null;
+  } catch (e) { return null; }
+}
+async function loadIdeas() {
+  const nbox = document.getElementById("ideasNotice");
+  const box = document.getElementById("ideasList");
+  const key = (localStorage.getItem(IDEAS_KEY_LS) || "").trim();
+  if (!key) {
+    ideasItemsCache = null;
+    document.getElementById("ideasFilters").innerHTML = "";
+    nbox.textContent = ""; nbox.style.display = "none";
+    box.innerHTML = '<p class="muted">キーが未設定のため表示できません。設定タブで読み取りキーを入れてください。</p>';
+    return;
+  }
+  nbox.textContent = "読み込み中…";
+  nbox.style.display = "";
+  try {
+    const res = await fetch(IDEAS_API_URL, {
+      headers: { "Authorization": "Bearer " + key, "Accept": "application/vnd.github.raw+json" },
+      cache: "no-store"
+    });
+    if (res.status === 401 || res.status === 403) {
+      const cached = readIdeasCache();
+      if (cached) {
+        renderIdeas(cached.data.items, "キーを確認してください（認証エラー " + res.status + "）。前回取得分を表示しています。");
+      } else {
+        ideasItemsCache = null;
+        document.getElementById("ideasFilters").innerHTML = "";
+        nbox.textContent = ""; nbox.style.display = "none";
+        box.innerHTML = '<p class="muted">キーを確認してください。設定タブで読み取りキーを入れ直してください。</p>';
+      }
+      return;
+    }
+    if (!res.ok) throw new Error("http " + res.status);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.items)) throw new Error("bad json");
+    try { localStorage.setItem(IDEAS_CACHE_LS, JSON.stringify({ fetchedAt: new Date().toISOString(), data: data })); } catch (e) {}
+    renderIdeas(data.items, "");
+  } catch (err) {
+    const cached = readIdeasCache();
+    if (cached) {
+      const when = cached.fetchedAt ? cached.fetchedAt.replace("T", " ").slice(0, 16) : "日時不明";
+      renderIdeas(cached.data.items, "前回取得分を表示中（取得日時：" + when + "）");
+    } else {
+      ideasItemsCache = null;
+      document.getElementById("ideasFilters").innerHTML = "";
+      nbox.textContent = ""; nbox.style.display = "none";
+      box.innerHTML = '<p class="muted">ネタ倉庫を取得できませんでした。通信できる場所で開き直してください。</p>';
+    }
+  }
+}
+
 /* ----- 追加・編集 ----- */
 function openForm(id) {
   editingId = id;
@@ -386,7 +538,15 @@ function importBackupFile(file) {
 }
 
 /* ----- 設定 ----- */
+function renderIdeasKeySettings() {
+  const saved = localStorage.getItem(IDEAS_KEY_LS) || "";
+  const input = document.getElementById("ideasKey");
+  if (input) input.value = saved;
+  const st = document.getElementById("ideasKeyState");
+  if (st) st.textContent = saved ? "キーは設定済みです。ネタ倉庫タブで表示できます。" : "キーは未設定です。";
+}
 function renderSettings() {
+  renderIdeasKeySettings();
   const counts = {};
   for (const e of store.episodes) counts[e.status] = (counts[e.status] || 0) + 1;
   document.getElementById("dataCounts").textContent =
@@ -417,7 +577,19 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("tabList").addEventListener("click", () => showTab("scrList"));
   document.getElementById("tabProd").addEventListener("click", () => showTab("scrProd"));
   document.getElementById("tabProgress").addEventListener("click", () => showTab("scrProgress"));
+  document.getElementById("tabIdeas").addEventListener("click", () => showTab("scrIdeas"));
   document.getElementById("tabSettings").addEventListener("click", () => showTab("scrSettings"));
+  document.getElementById("btnIdeasKeySave").addEventListener("click", () => {
+    const v = document.getElementById("ideasKey").value.trim();
+    if (v) localStorage.setItem(IDEAS_KEY_LS, v); else localStorage.removeItem(IDEAS_KEY_LS);
+    renderIdeasKeySettings();
+    alert(v ? "キーを保存しました" : "キーを消しました");
+  });
+  document.getElementById("btnIdeasKeyClear").addEventListener("click", () => {
+    if (!confirm("読み取りキーを消しますか？ネタ倉庫が見られなくなります。")) return;
+    localStorage.removeItem(IDEAS_KEY_LS);
+    renderIdeasKeySettings();
+  });
   document.getElementById("btnAdd").addEventListener("click", () => openForm(null));
   document.getElementById("btnFormCancel").addEventListener("click", () => { editingId = null; showTab(currentTab); });
   document.getElementById("btnFormSave").addEventListener("click", submitForm);
