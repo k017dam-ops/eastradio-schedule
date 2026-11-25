@@ -493,16 +493,86 @@ function deleteEditing() {
 }
 
 /* ----- 控えファイル（2段がけの外側） ----- */
-function exportBackup() {
-  const payload = { app: "eastradio-schedule", version: 1, exportedAt: new Date().toISOString(), episodes: store.episodes };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "eastradio-schedule-backup-" + toYMD(new Date()).replace(/-/g, "") + ".json";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+function markBackupExported() {
   store.lastBackupExport = new Date().toISOString();
   saveStore(false);
+}
+function downloadBackupFile(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+/* 共有もダウンロードも使えないときの予備：中身のテキストを表示してコピーできるようにする */
+function showExportTextFallback(text) {
+  const old = document.getElementById("exportFallback");
+  if (old) old.remove();
+  const wrap = document.createElement("div");
+  wrap.id = "exportFallback";
+  wrap.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";
+  const box = document.createElement("div");
+  box.style.cssText = "background:var(--hatch-widget-surface,#fff);color:var(--hatch-widget-text,#111);border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column;gap:10px;";
+  const title = document.createElement("div");
+  title.textContent = "控えファイルの中身（コピー用）";
+  title.style.cssText = "font-weight:700;font-size:16px;";
+  const note = document.createElement("div");
+  note.textContent = "保存がうまくいかないとき用です。下のテキストを全部コピーして、メモなどに貼って保管してください。";
+  note.style.cssText = "font-size:13px;line-height:1.5;";
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.readOnly = true;
+  ta.style.cssText = "width:100%;min-height:180px;flex:1;font-size:12px;box-sizing:border-box;";
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;gap:10px;";
+  const btnCopy = document.createElement("button");
+  btnCopy.type = "button";
+  btnCopy.textContent = "全部コピーする";
+  btnCopy.style.cssText = "flex:1;min-height:48px;font-size:15px;";
+  btnCopy.addEventListener("click", () => {
+    ta.focus(); ta.select();
+    const done = () => { btnCopy.textContent = "コピーしました"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => { document.execCommand("copy"); done(); });
+    } else { document.execCommand("copy"); done(); }
+  });
+  const btnClose = document.createElement("button");
+  btnClose.type = "button";
+  btnClose.textContent = "閉じる";
+  btnClose.style.cssText = "flex:1;min-height:48px;font-size:15px;";
+  btnClose.addEventListener("click", () => wrap.remove());
+  row.appendChild(btnCopy); row.appendChild(btnClose);
+  box.appendChild(title); box.appendChild(note); box.appendChild(ta); box.appendChild(row);
+  wrap.appendChild(box);
+  document.body.appendChild(wrap);
+}
+function exportBackup() {
+  const payload = { app: "eastradio-schedule", version: 1, exportedAt: new Date().toISOString(), episodes: store.episodes };
+  const text = JSON.stringify(payload, null, 2);
+  const filename = "eastradio-schedule-backup-" + toYMD(new Date()).replace(/-/g, "") + ".json";
+  const blob = new Blob([text], { type: "application/json" });
+  // 1) 共有シート（iPhoneのホーム画面アプリでは「ファイルに保存」やチャット添付が選べる）
+  let shareFile = null;
+  try { shareFile = new File([blob], filename, { type: "application/json" }); } catch (e) { shareFile = null; }
+  if (shareFile && navigator.canShare && navigator.share) {
+    let can = false;
+    try { can = navigator.canShare({ files: [shareFile] }); } catch (e) { can = false; }
+    if (can) {
+      navigator.share({ files: [shareFile] }).then(() => {
+        markBackupExported();
+      }).catch(err => {
+        if (err && err.name === "AbortError") return; // 本人が共有をやめたときは何もしない
+        try { downloadBackupFile(blob, filename); markBackupExported(); }
+        catch (e2) { showExportTextFallback(text); }
+      });
+      return;
+    }
+  }
+  // 2) 従来のダウンロード方式
+  try { downloadBackupFile(blob, filename); markBackupExported(); return; }
+  catch (e) { /* 次の予備へ */ }
+  // 3) 予備：テキスト表示
+  showExportTextFallback(text);
 }
 function normalizeEpisode(e) {
   const status = STATUS[e.status] ? e.status : "making";
