@@ -109,6 +109,20 @@ for (const e of store.episodes) {
   }
 }
 if (statusFixed2) saveStore(false);
+/* 第2話の公開反映（2026-11-27 19時：レイナ承認済み・公開切り替え完了）。
+   初期データのまま（組み立て完了・段階3・公開日2026-11-27）のときだけ付け替え、
+   手で変えた内容には触らない。 */
+const STATUS_FIX_EP02_PUBLISH_20261127 = [2];
+let statusFixedEp02 = false;
+for (const e of store.episodes) {
+  if (STATUS_FIX_EP02_PUBLISH_20261127.includes(Number(e.ep)) &&
+      e.status === "assembled" && Number(e.stageDone) === 3 && e.date === "2026-11-27") {
+    e.status = "published"; e.stageDone = 5; e.stageDoing = -1;
+    e.url = "https://youtu.be/AyC1gzsu8SE";
+    statusFixedEp02 = true;
+  }
+}
+if (statusFixedEp02) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
