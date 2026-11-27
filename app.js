@@ -96,6 +96,19 @@ for (const e of store.episodes) {
   }
 }
 if (statusFixed) saveStore(false);
+/* 第7話の組み立て完了とタイトルの反映（2026-11-27：レイナのOK済み）。
+   初期データのまま（制作中・段階0）のときだけ付け替え、手で変えた内容には触らない。 */
+const STATUS_FIX_20261127 = [7];
+let statusFixed2 = false;
+for (const e of store.episodes) {
+  if (STATUS_FIX_20261127.includes(Number(e.ep)) &&
+      e.status === "making" && Number(e.stageDone) === 0 && Number(e.stageDoing) === 0) {
+    e.status = "assembled"; e.stageDone = 3; e.stageDoing = -1;
+    if (e.title === "タイトル未定") e.title = "格闘技の果てに、範馬勇次郎はいるのか。";
+    statusFixed2 = true;
+  }
+}
+if (statusFixed2) saveStore(false);
 function saveStore(withSnapshot) {
   if (withSnapshot) {
     store.snapshots.push({ ts: new Date().toISOString(), data: JSON.stringify({ episodes: store.episodes }) });
