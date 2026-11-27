@@ -263,8 +263,56 @@
       "title": "第8話 一般公開",
       "updatedAt": "2026-11-25T06:39:10+09:00",
       "updatedBy": "mochi"
+    },
+    {
+      "id": "s0023",
+      "date": "2026-12-10",
+      "ep": 9,
+      "category": "production",
+      "title": "第9話まで音入れ完了",
+      "memo": "12月上旬の期限。第10話以降は台本のみ制作。",
+      "time": "",
+      "done": false,
+      "updatedAt": "2026-11-27T14:00:00+09:00",
+      "updatedBy": "tomo"
+    },
+    {
+      "id": "s0024",
+      "date": "2026-12-21",
+      "ep": 9,
+      "category": "unlisted",
+      "title": "第9話 限定公開アップロード",
+      "memo": "",
+      "time": "",
+      "done": false,
+      "updatedAt": "2026-11-27T14:00:00+09:00",
+      "updatedBy": "tomo"
+    },
+    {
+      "id": "s0025",
+      "date": "2026-12-22",
+      "ep": 9,
+      "category": "publish",
+      "title": "第9話 一般公開",
+      "memo": "",
+      "time": "19:00",
+      "done": false,
+      "updatedAt": "2026-11-27T14:00:00+09:00",
+      "updatedBy": "tomo"
+    },
+    {
+      "id": "s0026",
+      "date": "2026-12-22",
+      "ep": 10,
+      "category": "production",
+      "title": "第10話以降 音入れ再開",
+      "memo": "夜のクレジット回復確認後。第10話以降の台本は先行制作。",
+      "time": "",
+      "done": false,
+      "updatedAt": "2026-11-27T14:00:00+09:00",
+      "updatedBy": "tomo"
     }
   ],
-  "updatedAt": "2026-11-25T06:39:10+09:00",
+  "updatedAt": "2026-11-27T14:00:00+09:00",
   "version": 1
 }
