@@ -72,6 +72,13 @@ input[type=file]{display:none}
 #ideasNotice{display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px}
 .chip{font-size:13px;padding:6px 11px;border-radius:999px;border:1px solid #bbb;background:#fff;cursor:pointer}
 .chip.on{background:#1e3a4c;color:#fff;border-color:#1e3a4c;font-weight:700}
+.shows{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.shows .shows-title{font-size:13px;font-weight:700;color:#1e3a4c;margin-bottom:4px}
+.shows table{width:100%;border-collapse:collapse;font-size:14px}
+.shows td{padding:5px 0;border-top:1px solid #eee;vertical-align:top}
+.shows tr:first-child td{border-top:none}
+.shows td.days{text-align:right;white-space:nowrap;font-weight:700;padding-left:8px}
+.shows .tbd{display:block;font-size:12px;color:#777;font-weight:400}
 </style>
 </head>
 <body>
@@ -86,6 +93,14 @@ input[type=file]{display:none}
       </div>
     </header>
     <div id="overdueAlert"></div>
+    <div class="shows">
+      <div class="shows-title">番組ごとの公開曜日</div>
+      <table>
+        <tr><td>イーストラジオ045</td><td class="days">火・金<span class="tbd">日曜は長尺回のみ</span></td></tr>
+        <tr><td>Far East RADIO 045</td><td class="days">月・木<span class="tbd">開始日未定</span></td></tr>
+        <tr><td>闘技解体新書</td><td class="days">水・土<span class="tbd">開始日未定</span></td></tr>
+      </table>
+    </div>
     <div id="episodeList"></div>
     <div class="toolbar row">
       <button id="btnAdd" class="primary">＋ 話を足す</button>
