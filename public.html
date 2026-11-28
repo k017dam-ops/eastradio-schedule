@@ -1,0 +1,90 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開スケジュール | イーストラジオ045</title><style>
+:root{--ink:#20303a;--muted:#6b7a83;--gold:#c9a227;--teal:#1d3a44;--teal2:#2c5a68;--bg:#f6f7f9;--card:#ffffff;--line:#e2e8ec}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;padding:28px 20px 22px;text-align:center}
+header .badge{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;border:2px solid var(--gold);background:rgba(255,255,255,.08);margin-bottom:10px}
+header .badge svg{width:22px;height:22px;fill:#fff;margin-left:3px}
+header h1{margin:0;font-size:22px;letter-spacing:.04em}
+header p{margin:6px 0 0;font-size:13px;opacity:.85}
+main{max-width:640px;margin:0 auto;padding:18px 14px 40px}
+.channel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 8px;margin-bottom:18px;box-shadow:0 1px 3px rgba(20,40,50,.05)}
+.channel h2{margin:0 0 2px;font-size:17px}
+.channel .sub{font-size:12px;color:var(--muted);margin-bottom:10px}
+.channel a.watch{display:inline-block;font-size:13px;color:var(--teal2);text-decoration:none;border:1px solid var(--teal2);border-radius:999px;padding:5px 12px;margin-bottom:12px}
+h3{font-size:13px;color:var(--muted);margin:14px 0 8px;letter-spacing:.06em}
+.ep{display:flex;align-items:center;gap:12px;padding:10px 4px;border-top:1px solid var(--line)}
+.ep:first-of-type{border-top:none}
+.ep .no{font-weight:700;font-size:15px;white-space:nowrap}
+.ep .when{margin-left:auto;text-align:right;font-size:14px;white-space:nowrap}
+.ep .when .rel{display:block;font-size:11px;color:var(--muted)}
+.tag{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.soon{background:#fdf3d7;color:#8a6d1a;border:1px solid var(--gold)}
+.tag.done{background:#e6eef0;color:var(--teal2);border:1px solid #b9ccd2}
+.empty{font-size:13px;color:var(--muted);padding:8px 4px 14px}
+footer{text-align:center;font-size:11px;color:var(--muted);padding:0 16px 28px;line-height:1.7}
+.err{background:#fff3f3;border:1px solid #e5b4b4;color:#8a2f2f;border-radius:10px;padding:12px;font-size:13px}
+</style></head><body>
+<header>
+  <div class="badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+  <h1>公開スケジュール</h1>
+  <p>動画の公開予定をお知らせします</p>
+</header>
+<main id="main"><p class="empty">読み込み中…</p></main>
+<footer>予定は変更になる場合があります。<br>このページは公開予定が更新されると自動で反映されます。</footer>
+<script>
+(function(){
+  var CHANNELS = [
+    { name: "イーストラジオ045", sub: "車内からお届けする、一人語りのラジオ", url: "https://www.youtube.com/@eastradio045", source: "schedule.json" }
+  ];
+  var WD = ["日","月","火","水","木","金","土"];
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function parseDT(it){
+    var t = it.time && /^\d{1,2}:\d{2}$/.test(it.time) ? it.time : "19:00";
+    return new Date(it.date + "T" + t + ":00+09:00");
+  }
+  function fmtWhen(d){
+    var wd = WD[new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).getUTCDay()];
+    var hh = ("0"+d.getHours()).slice(-2), mm = ("0"+d.getMinutes()).slice(-2);
+    return (d.getMonth()+1) + "月" + d.getDate() + "日（" + wd + "）" + hh + ":" + mm;
+  }
+  function relLabel(d, now){
+    var dayMs = 24*60*60*1000;
+    var a = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    var b = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    var diff = Math.round((b - a) / dayMs);
+    if (diff === 0) return "本日公開";
+    if (diff === 1) return "明日公開";
+    if (diff > 1) return "あと" + diff + "日";
+    return "";
+  }
+  function renderChannel(ch, items){
+    var now = new Date();
+    var pubs = items.filter(function(i){ return i.category === "publish"; }).map(function(i){ return { ep: i.ep, dt: parseDT(i) }; });
+    pubs.sort(function(a,b){ return a.dt - b.dt; });
+    var upcoming = pubs.filter(function(p){ return p.dt > now; });
+    var past = pubs.filter(function(p){ return p.dt <= now; }).reverse();
+    var h = '<section class="channel"><h2>' + esc(ch.name) + '</h2><div class="sub">' + esc(ch.sub) + '</div>';
+    h += '<a class="watch" href="' + esc(ch.url) + '" target="_blank" rel="noopener">YouTubeチャンネルを見る</a>';
+    h += '<h3>公開予定</h3>';
+    if (upcoming.length === 0) h += '<p class="empty">現在、公開予定はありません。</p>';
+    upcoming.forEach(function(p){
+      h += '<div class="ep"><span class="no">第' + p.ep + '話</span><span class="tag soon">公開予定</span><span class="when">' + fmtWhen(p.dt) + '<span class="rel">' + relLabel(p.dt, now) + '</span></span></div>';
+    });
+    h += '<h3>公開済み</h3>';
+    if (past.length === 0) h += '<p class="empty">まだ公開済みの動画はありません。</p>';
+    past.forEach(function(p){
+      h += '<div class="ep"><span class="no">第' + p.ep + '話</span><span class="tag done">公開済み</span><span class="when">' + fmtWhen(p.dt) + '</span></div>';
+    });
+    h += '</section>';
+    return h;
+  }
+  var main = document.getElementById("main");
+  Promise.all(CHANNELS.map(function(ch){
+    return fetch(ch.source, { cache: "no-store" }).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(data){ return renderChannel(ch, data.items || []); })
+      .catch(function(){ return '<section class="channel"><h2>' + esc(ch.name) + '</h2><p class="err">予定を読み込めませんでした。時間をおいて開き直してください。</p></section>'; });
+  })).then(function(parts){ main.innerHTML = parts.join(""); });
+})();
+</script>
+</body></html>
