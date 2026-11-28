@@ -1,8 +1,8 @@
-// イーストラジオ045 公開スケジュール Service Worker: アプリ本体のキャッシュだけを扱う。
+// YouTube公開スケジュール Service Worker: アプリ本体のキャッシュだけを扱う。
 // 予定データは localStorage 側にあり、ここでは一切扱わない。
 // 方針はネット優先：新しい版が置かれたら必ず届くようにし、
 // 取れた応答でキャッシュも更新する。オフラインのときだけキャッシュを返す。
-const CACHE = "eastradio-schedule-v11";
+const CACHE = "eastradio-schedule-v12";
 const ASSETS = ["./index.html", "./app.js", "./manifest.webmanifest", "./icon-180.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
